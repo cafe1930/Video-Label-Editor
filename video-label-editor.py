@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QMutex, QObject
-from PyQt5.QtWidgets import (QWidget, QComboBox, QPushButton, QLineEdit, QLabel, QCheckBox,
+from PyQt5.QtWidgets import (QWidget, QComboBox, QPushButton, QLineEdit, QLabel, QCheckBox, QAction,
                              QTextEdit, QLCDNumber, QSlider, QListWidget, QAbstractItemView,
                              QHBoxLayout, QFileDialog, QVBoxLayout, QApplication, QMainWindow, QGridLayout, QListWidgetItem)
 
@@ -84,6 +84,16 @@ class AppWindow(QMainWindow):
 
         self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
+        # строка меню
+        open_file = QAction('Open', self)
+        open_file.setShortcut('Ctrl+O')
+        #openFile.setStatusTip('Open new File')
+        open_file.triggered.connect(self.open_file)
+
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(open_file)
+
         # выстраивание разметки приложения
         self.grid = QGridLayout()
         self.file_buttons_layout = QVBoxLayout()
@@ -118,6 +128,8 @@ class AppWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self.setWindowTitle('Video Label Editor')
+
+        
         
         # Инициализируем поток для показа видео с подключением слотов к сигналам потока
         self.setup_imshow_thread()
@@ -484,6 +496,8 @@ class AppWindow(QMainWindow):
         if self.is_showing:
             self.is_showing = False
             cv2.destroyAllWindows()
+
+
 
 
 class ImshowThread(QThread):
