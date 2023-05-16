@@ -79,8 +79,8 @@ class AppWindow(QMainWindow):
         self.visible_classes_list_widget.itemClicked.connect(self.update_visible_boxes_on_click_slot)
         self.visible_classes_list_widget.itemEntered.connect(self.update_visible_boxes_on_selection_slot)
 
-        self.show_all_button.stateChanged.connect(self.show_all_button_slot)
-        self.hide_all_button.stateChanged.connect(self.hide_all_button_slot)
+        self.show_all_button.clicked.connect(self.show_all_button_slot)
+        self.hide_all_button.clicked.connect(self.hide_all_button_slot)
 
         self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
@@ -165,7 +165,7 @@ class AppWindow(QMainWindow):
         класса потока к соответствующим слотам главного потока
         '''
         self.imshow_thread = ImshowThread()
-        self.imshow_thread.frame_update_signal.connect(self.update_visible_classess_list)
+        self.imshow_thread.frame_update_signal.connect(self.update_visible_classes_list)
 
 
     def update_visible_boxes_on_click_slot(self, item):
@@ -183,7 +183,7 @@ class AppWindow(QMainWindow):
                 if bbox_class_name == class_name and bbox_idx == sample_idx:
                     bbox.is_visible = item.isSelected()
 
-        self.update_visible_classess_list()
+        self.update_visible_classes_list()
 
     def update_visible_boxes_on_selection_slot(self, item):
         '''
@@ -228,8 +228,8 @@ class AppWindow(QMainWindow):
                     class_name, x0, y0, x1, y1 = str_bbox.split(',')
                 except Exception:
                     continue
-                if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
-                    scaling_factor = 0.7*self.screen_width/self.img_cols
+                if self.img_cols / self.screen_width > 0.65 or self.img_rows / self.screen_height > 0.65:
+                    scaling_factor = 0.65*self.screen_width/self.img_cols
                     scaling_function = lambda x: int(scaling_factor*int(x))
                 else:
                     scaling_function = int
@@ -268,8 +268,8 @@ class AppWindow(QMainWindow):
             
 
 
-    @pyqtSlot()
-    def update_visible_classess_list(self):
+    #@pyqtSlot()
+    def update_visible_classes_list(self):
         '''
         обновление списка рамок. 
         Информация о рамках берется из списка рамок, хранящегося в self.frame_with_boxes
@@ -472,8 +472,8 @@ class AppWindow(QMainWindow):
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame_idx)
 
         ret, frame = self.video_capture.read()
-        if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
-            scaling_factor = 0.7*self.screen_width/self.img_cols
+        if self.img_cols / self.screen_width > 0.65 or self.img_rows / self.screen_height > 0.65:
+            scaling_factor = 0.65*self.screen_width/self.img_cols
             print(f'img_cols/screen_width = {self.img_cols / self.screen_width}')
             print(f'scaling_factor={scaling_factor}')
             new_size = tuple(map(lambda x: int(scaling_factor*x), (self.img_cols, self.img_rows)))
@@ -483,7 +483,7 @@ class AppWindow(QMainWindow):
             self.frame_with_boxes.update_img(frame)
             
             self.load_labels_from_txt()
-            self.update_visible_classess_list()
+            self.update_visible_classes_list()
             
 
     def stop_showing(self):
@@ -492,6 +492,51 @@ class AppWindow(QMainWindow):
             cv2.destroyAllWindows()
 
 
+class BoxesCheckingWindow(AppWindow):
+    def update_visible_classes_list(self):
+        '''
+        Поведение отличается от родительского тем, что здесь мы отображаем в принципе все классы,
+        независимо от того, есть они в кадре или нет.
+        '''
+        print('ТЫ ПИДОР ЕПТА')
+        # заполняем список всех возможных классов, если он пуст
+        qlist_len = self.visible_classes_list_widget.count()
+        if qlist_len == 0:
+            for bbox_idx, class_name in enumerate(self.class_names_list):
+                displayed_name = f'{class_name}'
+                item = QListWidgetItem(displayed_name)
+                self.visible_classes_list_widget.addItem(item)
+            qlist_len = self.visible_classes_list_widget.count()
+
+        for item_idx in range(qlist_len):
+            item = self.visible_classes_list_widget.item(item_idx)
+            class_name = item.data(0)
+            for bbox in self.frame_with_boxes.bboxes_list:
+                actual_class_name = bbox.class_info_dict['class_name']
+                #sample_idx = bbox.class_info_dict['sample_idx']
+                is_selected = bbox.is_visible
+                if class_name==actual_class_name:
+                    if is_selected:
+                        self.visible_classes_list_widget.item(item_idx).setSelected(True)
+                        
+                    break
+
+    def update_visible_boxes_on_click_slot(self, item):
+        '''
+        Обновление видимых рамок в кадре. Контролируется посредством visible_classes_list_widget.
+        Если элемент выделен, то он отображается в кадре.
+        '''
+        class_name = item.data(0)
+        #class_name, bbox_idx = class_str.split(',')
+        #bbox_idx = int(bbox_idx)
+        if self.frame_with_boxes is not None:
+            for bbox in self.frame_with_boxes.bboxes_list:
+                bbox_class_name = bbox.class_info_dict['class_name'] 
+                #sample_idx = bbox.class_info_dict['sample_idx'] 
+                if bbox_class_name == class_name:# and bbox_idx == sample_idx:
+                    bbox.is_visible = item.isSelected()
+
+        self.update_visible_classes_list()
 
 
 class ImshowThread(QThread):
@@ -540,6 +585,6 @@ class ImshowThread(QThread):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     screen_resolution = app.desktop().screenGeometry()
-    ex = AppWindow(screen_resolution.width(), screen_resolution.height())
+    ex = BoxesCheckingWindow(screen_resolution.width(), screen_resolution.height())
     
     sys.exit(app.exec_())
