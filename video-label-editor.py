@@ -16,7 +16,7 @@ import time
 from opencv_frames import BboxFrame, Bbox, compute_iou
 
 class AppWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, screen_width, screen_height):
         super().__init__()       
 
         self.video_capture = None
@@ -27,6 +27,11 @@ class AppWindow(QMainWindow):
         self.frame_with_boxes = None
         self.img_rows = None
         self.img_cols = None
+
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+
 
         self.autosave_mode = False
 
@@ -208,15 +213,21 @@ class AppWindow(QMainWindow):
                 return
             
             text = text.split('\n')
-            
+
+            # словарь нужен для того, чтобы подсчитывать количество рамок одного класса
             new_bboxes_dict = {}
             for str_bbox in text:
                 try:
                     class_name, x0, y0, x1, y1 = str_bbox.split(',')
                 except Exception:
                     continue
-
-                x0, y0, x1, y1 = tuple(map(int, (x0, y0, x1, y1)))
+                if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
+                    scaling_function = lambda x: int(0.7*x)
+                else:
+                    scaling_function = int
+                # !!!
+                #scaling_function = lambda x: int(0.7*int(x))
+                x0, y0, x1, y1 = tuple(map(scaling_function, (x0, y0, x1, y1)))
                 color = self.frame_with_boxes.palette_dict[class_name]
                 try:
                     new_bboxes_dict[class_name].append((color, x0, y0, x1, y1))
@@ -453,6 +464,9 @@ class AppWindow(QMainWindow):
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame_idx)
 
         ret, frame = self.video_capture.read()
+        if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
+            new_size = tuple(map(lambda x: int(0.7*x), (self.img_cols, self.img_rows)))
+            frame = cv2.resize(frame, new_size)
         
         if ret:
             self.frame_with_boxes.update_img(frame)
@@ -512,7 +526,7 @@ class ImshowThread(QThread):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = AppWindow()
-    #ex = PersonDetectorGUI()
+    screen_resolution = app.desktop().screenGeometry()
+    ex = AppWindow(screen_resolution.width(), screen_resolution.height())
     
     sys.exit(app.exec_())
