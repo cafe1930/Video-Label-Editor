@@ -222,11 +222,13 @@ class AppWindow(QMainWindow):
                 except Exception:
                     continue
                 if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
-                    scaling_function = lambda x: int(0.7*x)
+                    scaling_factor = 0.7*self.screen_width/self.img_cols
+                    scaling_function = lambda x: int(scaling_factor*int(x))
                 else:
                     scaling_function = int
                 # !!!
-                #scaling_function = lambda x: int(0.7*int(x))
+                #scaling_factor = self.img_cols*1.5/0.7/self.screen_width
+                #scaling_function = lambda x: int(scaling_factor*int(x))
                 x0, y0, x1, y1 = tuple(map(scaling_function, (x0, y0, x1, y1)))
                 color = self.frame_with_boxes.palette_dict[class_name]
                 try:
@@ -256,7 +258,7 @@ class AppWindow(QMainWindow):
             if len(new_bboxes_list) != 0:
 
                 self.frame_with_boxes.bboxes_list = new_bboxes_list
-            print(new_bboxes_list)
+            
 
 
     @pyqtSlot()
@@ -465,7 +467,10 @@ class AppWindow(QMainWindow):
 
         ret, frame = self.video_capture.read()
         if self.img_cols / self.screen_width > 0.7 or self.img_rows / self.screen_height > 0.7:
-            new_size = tuple(map(lambda x: int(0.7*x), (self.img_cols, self.img_rows)))
+            scaling_factor = 0.7*self.screen_width/self.img_cols
+            print(f'img_cols/screen_width = {self.img_cols / self.screen_width}')
+            print(f'scaling_factor={scaling_factor}')
+            new_size = tuple(map(lambda x: int(scaling_factor*x), (self.img_cols, self.img_rows)))
             frame = cv2.resize(frame, new_size)
         
         if ret:
