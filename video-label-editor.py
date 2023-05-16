@@ -74,8 +74,12 @@ class AppWindow(QMainWindow):
         self.visible_classes_list_widget.itemClicked.connect(self.update_visible_boxes_on_click_slot)
         self.visible_classes_list_widget.itemEntered.connect(self.update_visible_boxes_on_selection_slot)
 
+        self.show_all_checkbox.stateChanged.connect(self.show_all_checkbox_slot)
+        self.hide_all_checkbox.stateChanged.connect(self.hide_all_checkbox_slot)
+
         self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
+        # выстраивание разметки приложения
         self.grid = QGridLayout()
         self.file_buttons_layout = QVBoxLayout()
         self.displaying_classes_layout = QVBoxLayout()
@@ -115,7 +119,17 @@ class AppWindow(QMainWindow):
         self.show()
 
     def show_all_checkbox_slot(self):
-        pass
+        if self.show_all_checkbox.isChecked():
+            self.hide_all_checkbox.setChecked(False)
+        else:
+            pass
+    
+    def hide_all_checkbox_slot(self):
+        if self.hide_all_checkbox.isChecked():
+            self.show_all_checkbox.setChecked(False)
+        else:
+            pass
+
 
     def display_frame_position(self, current_frame_idx):
         if self.video_capture is None or self.frame_with_boxes is None:
