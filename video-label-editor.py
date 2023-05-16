@@ -107,7 +107,7 @@ class AppWindow(QMainWindow):
 
         self.control_layout.addWidget(self.frame_display)
         self.control_layout.addWidget(self.frame_slider)
-        self.control_layout.addWidget(self.autosave_current_checkbox)
+        #self.control_layout.addWidget(self.autosave_current_checkbox)
         self.control_layout.addLayout(self.prev_next_layout)
 
         self.file_buttons_layout.addWidget(open_file_button)
@@ -119,7 +119,7 @@ class AppWindow(QMainWindow):
         self.displaying_classes_layout.addWidget(self.show_all_checkbox)
         self.displaying_classes_layout.addWidget(self.hide_all_checkbox)
 
-        self.horizontal_layout.addLayout(self.file_buttons_layout)
+        #self.horizontal_layout.addLayout(self.file_buttons_layout)
         self.horizontal_layout.addLayout(self.control_layout)
         self.horizontal_layout.addLayout(self.displaying_classes_layout)
 
