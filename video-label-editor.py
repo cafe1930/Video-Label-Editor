@@ -44,8 +44,8 @@ class AppWindow(QMainWindow):
         next_frame_button = QPushButton("Next Frame")
         previous_frame_button = QPushButton("Previous Frame")
         self.autosave_current_checkbox = QCheckBox('Autosave Current Boxes')
-        self.show_all_checkbox = QCheckBox('Show all classes')
-        self.hide_all_checkbox = QCheckBox('Hide all classes')
+        self.show_all_button = QPushButton('Show all classes')
+        self.hide_all_button = QPushButton('Hide all classes')
 
         # чтение списка классов из json
         with open('settings.json', 'r', encoding='utf-8') as fd:
@@ -79,17 +79,18 @@ class AppWindow(QMainWindow):
         self.visible_classes_list_widget.itemClicked.connect(self.update_visible_boxes_on_click_slot)
         self.visible_classes_list_widget.itemEntered.connect(self.update_visible_boxes_on_selection_slot)
 
-        self.show_all_checkbox.stateChanged.connect(self.show_all_checkbox_slot)
-        self.hide_all_checkbox.stateChanged.connect(self.hide_all_checkbox_slot)
+        self.show_all_button.stateChanged.connect(self.show_all_button_slot)
+        self.hide_all_button.stateChanged.connect(self.hide_all_button_slot)
 
         self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
-        # строка меню
+        # действия для строки меню
         open_file = QAction('Open', self)
         open_file.setShortcut('Ctrl+O')
         #openFile.setStatusTip('Open new File')
         open_file.triggered.connect(self.open_file)
 
+        # строка меню
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(open_file)
@@ -116,8 +117,8 @@ class AppWindow(QMainWindow):
 
         self.displaying_classes_layout.addWidget(self.classes_combobox)
         self.displaying_classes_layout.addWidget(self.visible_classes_list_widget)
-        self.displaying_classes_layout.addWidget(self.show_all_checkbox)
-        self.displaying_classes_layout.addWidget(self.hide_all_checkbox)
+        self.displaying_classes_layout.addWidget(self.show_all_button)
+        self.displaying_classes_layout.addWidget(self.hide_all_button)
 
         #self.horizontal_layout.addLayout(self.file_buttons_layout)
         self.horizontal_layout.addLayout(self.control_layout)
@@ -135,17 +136,11 @@ class AppWindow(QMainWindow):
         self.setup_imshow_thread()
         self.show()
 
-    def show_all_checkbox_slot(self):
-        if self.show_all_checkbox.isChecked():
-            self.hide_all_checkbox.setChecked(False)
-        else:
-            pass
+    def show_all_button_slot(self):
+        pass
     
-    def hide_all_checkbox_slot(self):
-        if self.hide_all_checkbox.isChecked():
-            self.show_all_checkbox.setChecked(False)
-        else:
-            pass
+    def hide_all_button_slot(self):    
+        pass
 
 
     def display_frame_position(self, current_frame_idx):
@@ -350,6 +345,7 @@ class AppWindow(QMainWindow):
 
         
     def open_file(self):
+        self.close_imshow_thread()
         # получаем абсолютный путь до файла
         title = 'Open video'
 
@@ -403,8 +399,6 @@ class AppWindow(QMainWindow):
         self.setup_slider_range(max_val=self.frame_number, current_idx=self.current_frame_idx)
 
         self.window_name = name
-
-        self.close_imshow_thread()
         
         self.frame_with_boxes = BboxFrame(frame, self.class_names_list, self.class_names_list[0])
         self.setup_imshow_thread()
