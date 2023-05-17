@@ -226,7 +226,7 @@ class AppWindow(QMainWindow):
         if os.path.isfile(path_to_to_loading_labels):
             # сохраняем список рамок предыдущего кадра
             self.temp_bboxes_list = self.frame_with_boxes.bboxes_list
-            print(self.temp_bboxes_list)
+            
             
             with open(path_to_to_loading_labels, 'r') as fd:
                 text = fd.read()
@@ -319,8 +319,7 @@ class AppWindow(QMainWindow):
             item = QListWidgetItem(data_dict['data'])
             self.visible_classes_list_widget.addItem(item)
             self.visible_classes_list_widget.item(bbox_idx).setSelected(data_dict['is_selected'])
-        print()
-        print(new_list)
+        
             
     def update_current_box_class_name(self, class_name):
         if self.frame_with_boxes is not None:
@@ -467,14 +466,12 @@ class AppWindow(QMainWindow):
         # сохраняем все рамки
         if self.current_frame_idx > -1:
             if self.autosave_mode:
-                print('SAVE', self.current_frame_idx)
                 self.save_labels_to_txt()
         self.current_frame_idx += 1              
         self.show_frame()
 
 
     def show_frame(self):
-        print(f'Current frame is {self.current_frame_idx}')
         if self.video_capture is None or self.current_frame_idx >= self.frame_number:
             return
         if self.current_frame_idx < 0:
@@ -488,8 +485,6 @@ class AppWindow(QMainWindow):
         ret, frame = self.video_capture.read()
         if self.img_cols / self.screen_width > 0.65 or self.img_rows / self.screen_height > 0.65:
             scaling_factor = 0.65*self.screen_width/self.img_cols
-            print(f'img_cols/screen_width = {self.img_cols / self.screen_width}')
-            print(f'scaling_factor={scaling_factor}')
             new_size = tuple(map(lambda x: int(scaling_factor*x), (self.img_cols, self.img_rows)))
             frame = cv2.resize(frame, new_size)
         
