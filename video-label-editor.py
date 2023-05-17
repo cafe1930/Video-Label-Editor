@@ -181,8 +181,6 @@ class AppWindow(QMainWindow):
                 except Exception:
                     continue
                 if class_name == searching_class_name:
-
-                    self.set_slider_display_value(frame_idx)
                     self.current_frame_idx = frame_idx
                     self.show_frame()
                     self.show_info_message_box(
@@ -576,15 +574,16 @@ class BoxesCheckingWindow(AppWindow):
 
         for item_idx in range(qlist_len):
             item = self.visible_classes_list_widget.item(item_idx)
+            is_selected = self.visible_classes_list_widget.item(item_idx).isSelected()
             class_name = item.data(0)
             for bbox in self.frame_with_boxes.bboxes_list:
                 actual_class_name = bbox.class_info_dict['class_name']
                 #sample_idx = bbox.class_info_dict['sample_idx']
-                is_selected = bbox.is_visible
+                #is_selected = bbox.is_visible
                 if class_name==actual_class_name:
                     if is_selected:
-                        self.visible_classes_list_widget.item(item_idx).setSelected(True)
-                        
+                        #self.visible_classes_list_widget.item(item_idx).setSelected(True)
+                        bbox.is_visible = True
                     break
 
     def update_visible_boxes_on_click_slot(self, item):
