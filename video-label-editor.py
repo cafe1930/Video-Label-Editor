@@ -137,10 +137,22 @@ class AppWindow(QMainWindow):
         self.show()
 
     def show_all_button_slot(self):
-        pass
+        self.show_or_hide(is_selected=True)
     
     def hide_all_button_slot(self):    
-        pass
+        self.show_or_hide(is_selected=False)
+
+    def show_or_hide(self, is_selected):
+        # определяем количество элементов в списке
+        qlist_len = self.visible_classes_list_widget.count()
+        for item_idx in range(qlist_len):
+            class_name = self.visible_classes_list_widget.item(item_idx).data(0)
+            for bbox in self.frame_with_boxes.bboxes_list:
+                bbox_class_name = bbox.class_info_dict['class_name']
+                if bbox_class_name == class_name:
+                    bbox.is_visible = is_selected
+                    self.visible_classes_list_widget.item(item_idx).setSelected(is_selected)
+                    break
 
 
     def display_frame_position(self, current_frame_idx):
@@ -185,11 +197,13 @@ class AppWindow(QMainWindow):
 
         self.update_visible_classes_list()
 
+    
     def update_visible_boxes_on_selection_slot(self, item):
         '''
         Обновление видимых рамок в кадре. Контролируется посредством visible_classes_list_widget.
         Если элемент выделен, то он отображается в кадре.
         '''
+        return
 
         class_str = item.data(0)
         class_name, bbox_idx = class_str.split(',')
@@ -247,7 +261,7 @@ class AppWindow(QMainWindow):
             new_bboxes_list = []
             for class_name, coords_list in new_bboxes_dict.items():
                 for bbox_idx, (color, x0, y0, x1, y1) in enumerate(coords_list):
-                    is_visible = True
+                    is_visible = False
                     for prev_bbox in self.temp_bboxes_list:
                         prev_class_name, prev_color, prev_bbox_idx = tuple(prev_bbox.class_info_dict.values())
                         
@@ -498,7 +512,7 @@ class BoxesCheckingWindow(AppWindow):
         Поведение отличается от родительского тем, что здесь мы отображаем в принципе все классы,
         независимо от того, есть они в кадре или нет.
         '''
-        print('ТЫ ПИДОР ЕПТА')
+        
         # заполняем список всех возможных классов, если он пуст
         qlist_len = self.visible_classes_list_widget.count()
         if qlist_len == 0:
