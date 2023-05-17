@@ -227,7 +227,6 @@ class AppWindow(QMainWindow):
             # сохраняем список рамок предыдущего кадра
             self.temp_bboxes_list = self.frame_with_boxes.bboxes_list
             
-            
             with open(path_to_to_loading_labels, 'r') as fd:
                 text = fd.read()
             if len(text) == 0:
