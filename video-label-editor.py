@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QMutex, QObject
 from PyQt5.QtWidgets import (QWidget, QComboBox, QPushButton, QLineEdit, QLabel, QCheckBox, QAction,
-                             QTextEdit, QLCDNumber, QSlider, QListWidget, QAbstractItemView,
+                             QTextEdit, QLCDNumber, QSlider, QListWidget, QAbstractItemView, QMessageBox,
                              QHBoxLayout, QFileDialog, QVBoxLayout, QApplication, QMainWindow, QGridLayout, QListWidgetItem)
 
 import cv2
@@ -21,7 +21,7 @@ class AppWindow(QMainWindow):
 
         self.video_capture = None
         self.path_to_labelling_folder = None
-        self.paths_to_labels_list = None
+        self.paths_to_labels_list = []
         self.path_to_video = None
         self.window_name = None
         self.frame_with_boxes = None
@@ -44,8 +44,12 @@ class AppWindow(QMainWindow):
         next_frame_button = QPushButton("Next Frame")
         previous_frame_button = QPushButton("Previous Frame")
         self.autosave_current_checkbox = QCheckBox('Autosave Current Boxes')
-        self.show_all_button = QPushButton('Show all classes')
-        self.hide_all_button = QPushButton('Hide all classes')
+        show_all_button = QPushButton('Show all classes')
+        hide_all_button = QPushButton('Hide all classes')
+
+        search_first_appearance_button = QPushButton("Search for first appearance")
+
+
 
         # чтение списка классов из json
         with open('settings.json', 'r', encoding='utf-8') as fd:
@@ -79,8 +83,9 @@ class AppWindow(QMainWindow):
         self.visible_classes_list_widget.itemClicked.connect(self.update_visible_boxes_on_click_slot)
         self.visible_classes_list_widget.itemEntered.connect(self.update_visible_boxes_on_selection_slot)
 
-        self.show_all_button.clicked.connect(self.show_all_button_slot)
-        self.hide_all_button.clicked.connect(self.hide_all_button_slot)
+        show_all_button.clicked.connect(self.show_all_button_slot)
+        hide_all_button.clicked.connect(self.hide_all_button_slot)
+        search_first_appearance_button.clicked.connect(self.search_first_appearance_button_slot)
 
         self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
@@ -117,8 +122,9 @@ class AppWindow(QMainWindow):
 
         self.displaying_classes_layout.addWidget(self.classes_combobox)
         self.displaying_classes_layout.addWidget(self.visible_classes_list_widget)
-        self.displaying_classes_layout.addWidget(self.show_all_button)
-        self.displaying_classes_layout.addWidget(self.hide_all_button)
+        self.displaying_classes_layout.addWidget(show_all_button)
+        self.displaying_classes_layout.addWidget(hide_all_button)
+        self.displaying_classes_layout.addWidget(search_first_appearance_button)
 
         #self.horizontal_layout.addLayout(self.file_buttons_layout)
         self.horizontal_layout.addLayout(self.control_layout)
@@ -129,12 +135,60 @@ class AppWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self.setWindowTitle('Video Label Editor')
-
-        
         
         # Инициализируем поток для показа видео с подключением слотов к сигналам потока
         self.setup_imshow_thread()
         self.show()
+
+    def show_info_message_box(self, window_title, info_text):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setWindowTitle(window_title)
+        msg_box.setText(info_text)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        return msg_box.exec()
+
+    def search_first_appearance_button_slot(self):
+        # Сначала надо проверить, что выделен лишь один класс
+        qlist_len = self.visible_classes_list_widget.count()
+        if qlist_len == 0:
+            return
+
+        selected_cnt = 0
+        searching_class_name = None
+        for item_idx in range(qlist_len):
+            if self.visible_classes_list_widget.item(item_idx).isSelected():
+                selected_cnt += 1
+                searching_class_name = self.visible_classes_list_widget.item(item_idx).data(0)
+            if selected_cnt > 1:
+                self.show_info_message_box(window_title="Class search info", info_text="You should select only one class for searching")
+                return
+
+        if searching_class_name is None:
+            self.show_info_message_box(window_title="Class search info", info_text="No classes are selected")
+            return
+        
+        for frame_idx, path in enumerate(self.paths_to_labels_list):
+            with open(path, 'r') as fd:
+                text = fd.read()
+            if len(text) == 0:
+                return
+            
+            text = text.split('\n')
+            for str_bbox in text:
+                try:
+                    class_name, x0, y0, x1, y1 = str_bbox.split(',')
+                except Exception:
+                    continue
+                if class_name == searching_class_name:
+
+                    self.set_slider_display_value(frame_idx)
+                    self.current_frame_idx = frame_idx
+                    self.show_frame()
+                    self.show_info_message_box(
+                        window_title="Class search info",
+                        info_text=f"First appearance of {class_name} at frame #{frame_idx}")
+                    return
 
     def show_all_button_slot(self):
         self.show_or_hide(is_selected=True)
@@ -453,6 +507,8 @@ class AppWindow(QMainWindow):
             return
 
         self.current_frame_idx -= 1
+        if self.current_frame_idx < 0:
+            return
         self.show_frame()
 
 
@@ -466,7 +522,9 @@ class AppWindow(QMainWindow):
         if self.current_frame_idx > -1:
             if self.autosave_mode:
                 self.save_labels_to_txt()
-        self.current_frame_idx += 1              
+        self.current_frame_idx += 1
+        if self.current_frame_idx >= self.frame_number:
+            return
         self.show_frame()
 
 
