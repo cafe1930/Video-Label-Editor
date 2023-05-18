@@ -120,7 +120,8 @@ class AppWindow(QMainWindow):
         self.file_buttons_layout.addWidget(close_video_button)
         self.file_buttons_layout.addWidget(save_file_button)
 
-        self.displaying_classes_layout.addWidget(self.classes_combobox)
+        # пока что спрячем разворачивающийся список классов...
+        #self.displaying_classes_layout.addWidget(self.classes_combobox)
         self.displaying_classes_layout.addWidget(self.visible_classes_list_widget)
         self.displaying_classes_layout.addWidget(show_all_button)
         self.displaying_classes_layout.addWidget(hide_all_button)
