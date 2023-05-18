@@ -561,16 +561,45 @@ class AppWindow(QMainWindow):
 
 
 class BoxesCheckingWindow(AppWindow):
+    def get_unique_classes_on_frame(self, path_to_txt):
+        with open(path_to_txt, 'r') as fd:
+            text = fd.read()
+        if len(text) == 0:
+            return
+        
+        text = text.split('\n')
+
+        unique_classes = set()
+        for str_bbox in text:
+            try:
+                class_name, x0, y0, x1, y1 = str_bbox.split(',')
+            except Exception:
+                continue
+
+            unique_classes.add(class_name)
+        #print(unique_classes)
+
+        return unique_classes
+
     def update_visible_classes_list(self):
         '''
         Поведение отличается от родительского тем, что здесь мы отображаем в принципе все классы,
         независимо от того, есть они в кадре или нет.
         '''
-        
+        # Выясняем, какие классы встречаются в выборке
+        unique_classes = set()
+        for path in self.paths_to_labels_list:
+            #print(self.get_unique_classes_on_frame(path))
+            unique_classes = unique_classes.union(self.get_unique_classes_on_frame(path))
+
+        #print(unique_classes)
+        unique_classes = sorted(list(unique_classes))
+        #print(unique_classes)
+
         # заполняем список всех возможных классов, если он пуст
         qlist_len = self.visible_classes_list_widget.count()
         if qlist_len == 0:
-            for bbox_idx, class_name in enumerate(self.class_names_list):
+            for bbox_idx, class_name in enumerate(unique_classes):
                 displayed_name = f'{class_name}'
                 item = QListWidgetItem(displayed_name)
                 self.visible_classes_list_widget.addItem(item)
