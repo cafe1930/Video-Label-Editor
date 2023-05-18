@@ -166,7 +166,7 @@ class AppWindow(QMainWindow):
                 return
 
         if searching_class_name is None:
-            self.show_info_message_box(window_title="Class search info", info_text="No classes are selected")
+            self.show_info_message_box(window_title="Class search info", info_text="No class is selected")
             return
         
         for frame_idx, path in enumerate(self.paths_to_labels_list):
@@ -188,6 +188,9 @@ class AppWindow(QMainWindow):
                         window_title="Class search info",
                         info_text=f"First appearance of {class_name} at frame #{frame_idx}")
                     return
+        self.show_info_message_box(
+            window_title="Class search info",
+            info_text=f"{searching_class_name} is not presented")
 
     def show_all_button_slot(self):
         self.show_or_hide(is_selected=True)
