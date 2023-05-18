@@ -57,9 +57,9 @@ class AppWindow(QMainWindow):
 
         self.class_names_list = self.settings_dict['classes']
         
-        self.classes_combobox = QComboBox(self)
+        #self.classes_combobox = QComboBox(self)
         
-        self.classes_combobox.addItems(self.class_names_list)
+        #self.classes_combobox.addItems(self.class_names_list)
 
         # список отображаемых рамок
         self.visible_classes_list_widget = QListWidget()
@@ -87,7 +87,7 @@ class AppWindow(QMainWindow):
         hide_all_button.clicked.connect(self.hide_all_button_slot)
         search_first_appearance_button.clicked.connect(self.search_first_appearance_button_slot)
 
-        self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
+        #self.classes_combobox.currentTextChanged.connect(self.update_current_box_class_name)
 
         # действия для строки меню
         open_file = QAction('Open', self)
