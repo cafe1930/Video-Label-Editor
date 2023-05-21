@@ -31,6 +31,9 @@ class AppWindow(QMainWindow):
         self.screen_width = screen_width
         self.screen_height = screen_height
 
+        # наверное, лучше хранить все рамки в списке, что должно чуть-чуть ускорить обработку
+        self.frame_bboxes_list = []
+
 
 
         self.autosave_mode = False
@@ -561,25 +564,181 @@ class AppWindow(QMainWindow):
 
 
 class BoxesCheckingWindow(AppWindow):
-    def get_unique_classes_on_frame(self, path_to_txt):
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height)
+        self.all_frames_bboxes_list = []
+    
+    def open_file(self):
+        '''
+        Поведение от родительского отличается тем, что мы собираем все классы, которые есть в виде в единый список, к которому мы потом обращаемся
+        '''
+        self.close_imshow_thread()
+        # получаем абсолютный путь до файла
+        title = 'Open video'
+
+        # записываем в файл settings.json путь до папки с последним открытым файлом
+        try:
+            last_opened_folder_path = self.settings_dict['last_opened_folder']
+        except KeyError:
+            last_opened_folder_path = '/home'
+
+        
+        # фильтр разрешений файлов
+        file_filter = 'Videos (*.mp4 *.wmw *.avi *.mpeg)'
+        open_status_tuple = QFileDialog.getOpenFileName(self, title, last_opened_folder_path, file_filter)
+        path = open_status_tuple[0]
+        if len(path) == 0:
+            return
+
+        path = os.sep.join(path.split('/'))
+        path_to_folder, name = os.path.split(path)   
+
+        self.settings_dict['last_opened_folder'] = path_to_folder
+        with open('settings.json', 'w', encoding='utf-8') as fd:
+            json.dump(self.settings_dict, fd)
+
+        label_folder_name = '.'.join(name.split('.')[:-1]) + '_labels'
+        
+        self.path_to_labelling_folder = os.path.join(path_to_folder, label_folder_name)
+
+        if os.path.isdir(self.path_to_labelling_folder):
+            # список путей до txt файлов с координатами рамок номер кадра совпадает с именем файла
+            self.paths_to_labels_list = glob.glob(os.path.join(self.path_to_labelling_folder, '*.txt'))
+        else:
+            self.paths_to_labels_list = []
+            os.mkdir(self.path_to_labelling_folder)
+
+        self.video_capture = cv2.VideoCapture(path)
+        ret, frame = self.video_capture.read()
+        if not ret:
+            raise RuntimeError(f'Can not read {path} video')
+        
+        self.frame_number = int(self.video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.img_rows, self.img_cols = frame.shape[:2]
+        '''
+        if len(self.paths_to_labels_list) > 0:
+            self.current_frame_idx = len(self.paths_to_labels_list) - 1
+        else:
+            self.current_frame_idx = 0
+        '''
+        # индексируем все рамки в видео
+        self.all_frames_bboxes_list = []
+        for frame_idx in range(self.frame_number):
+            path = os.path.join(self.path_to_labelling_folder, '{:07d}.txt'.format(frame_idx))
+            #print(path)
+            if os.path.isfile(path):
+                bbox = self.get_boxes_on_frame(path)
+            else:
+                bbox = None
+            self.all_frames_bboxes_list.append(bbox)
+
+        # полчаем список уникальных классов
+        self.unique_classes = set()
+        for frame_bboxes in self.all_frames_bboxes_list:
+            if frame_bboxes is not None:
+                for bbox in frame_bboxes:
+                    self.unique_classes.add(bbox[0])
+        self.unique_classes = sorted(list(self.unique_classes))
+        
+        #print(self.all_frames_bboxes_list)
+
+
+        self.current_frame_idx = 0
+
+        self.setup_slider_range(max_val=self.frame_number, current_idx=self.current_frame_idx)
+
+        self.window_name = name
+        
+        self.frame_with_boxes = BboxFrame(frame, self.class_names_list, self.class_names_list[0])
+        self.setup_imshow_thread()
+        
+        self.imshow_thread.setup_frame(self.frame_with_boxes, self.window_name)
+        
+        self.imshow_thread.start()
+
+        # сразу открываем видео
+        self.show_frame()
+
+
+    def load_labels_from_txt(self):
+        '''
+        Загружаем из txt-файлов координаты рамок и информацию о классах. 
+        Информация загружается в self.frame_with_boxes, 
+        self.visible_classes_list_widget не изменяется
+        '''
+        current_frame_box = self.all_frames_bboxes_list[self.current_frame_idx]
+        if current_frame_box is not None:
+            # сохраняем список рамок предыдущего кадра
+            self.temp_bboxes_list = self.frame_with_boxes.bboxes_list
+            
+            
+            # словарь нужен для того, чтобы подсчитывать количество рамок одного класса
+            new_bboxes_dict = {}
+            for bbox in current_frame_box:
+                class_name, x0, y0, x1, y1 = bbox
+                if self.img_cols / self.screen_width > 0.65 or self.img_rows / self.screen_height > 0.65:
+                    scaling_factor = 0.65*self.screen_width/self.img_cols
+                    scaling_function = lambda x: int(scaling_factor*int(x))
+                else:
+                    scaling_function = int
+                # !!!
+                #scaling_factor = self.img_cols*1.5/0.7/self.screen_width
+                #scaling_function = lambda x: int(scaling_factor*int(x))
+                x0, y0, x1, y1 = tuple(map(scaling_function, (x0, y0, x1, y1)))
+                color = self.frame_with_boxes.palette_dict[class_name]
+                try:
+                    new_bboxes_dict[class_name].append((color, x0, y0, x1, y1))
+                except KeyError:
+                    new_bboxes_dict[class_name] = [(color, x0, y0, x1, y1)]
+            
+            # создаем новый список рамок
+            new_bboxes_list = []
+            for class_name, coords_list in new_bboxes_dict.items():
+                for bbox_idx, (color, x0, y0, x1, y1) in enumerate(coords_list):
+                    is_visible = False
+                    for prev_bbox in self.temp_bboxes_list:
+                        prev_class_name, prev_color, prev_bbox_idx = tuple(prev_bbox.class_info_dict.values())
+                        
+                        if bbox_idx == prev_bbox_idx and class_name == prev_class_name:
+                            is_visible = prev_bbox.is_visible
+                            break
+
+                    new_bbox = Bbox(x0, y0, x1, y1, self.img_cols, self.img_rows, class_name, color, bbox_idx, is_visible)
+                    new_bboxes_list.append(new_bbox)
+
+            # переиндексируем рамки
+
+            for class_name, bboxes_list in new_bboxes_dict.items():
+                self.frame_with_boxes.class_indices_dict[class_name] = len(bboxes_list)
+            if len(new_bboxes_list) != 0:
+                self.frame_with_boxes.bboxes_list = new_bboxes_list
+
+        
+        #path_to_to_loading_labels = os.path.join(self.path_to_labelling_folder, '{:07d}.txt'.format(self.current_frame_idx))
+        #if os.path.isfile(path_to_to_loading_labels):
+            
+
+
+    def get_boxes_on_frame(self, path_to_txt):
         with open(path_to_txt, 'r') as fd:
             text = fd.read()
         if len(text) == 0:
-            return
+            return None
         
         text = text.split('\n')
 
-        unique_classes = set()
+        frame_boxes = []
         for str_bbox in text:
             try:
                 class_name, x0, y0, x1, y1 = str_bbox.split(',')
             except Exception:
                 continue
-
-            unique_classes.add(class_name)
+            x0, y0, x1, y1 = tuple(map(int, (x0, y0, x1, y1)))
+            frame_boxes.append((class_name, x0, y0, x1, y1))
         #print(unique_classes)
-
-        return unique_classes
+    
+        return frame_boxes
+    
 
     def update_visible_classes_list(self):
         '''
@@ -587,19 +746,19 @@ class BoxesCheckingWindow(AppWindow):
         независимо от того, есть они в кадре или нет.
         '''
         # Выясняем, какие классы встречаются в выборке
-        unique_classes = set()
-        for path in self.paths_to_labels_list:
-            #print(self.get_unique_classes_on_frame(path))
-            unique_classes = unique_classes.union(self.get_unique_classes_on_frame(path))
+        #unique_classes = set()
+        #for path in self.paths_to_labels_list:
+        #    #print(self.get_unique_classes_on_frame(path))
+        #    unique_classes = unique_classes.union(self.get_unique_classes_on_frame(path))
 
         #print(unique_classes)
-        unique_classes = sorted(list(unique_classes))
+        #unique_classes = sorted(list(unique_classes))
         #print(unique_classes)
 
         # заполняем список всех возможных классов, если он пуст
         qlist_len = self.visible_classes_list_widget.count()
         if qlist_len == 0:
-            for bbox_idx, class_name in enumerate(unique_classes):
+            for bbox_idx, class_name in enumerate(self.unique_classes):
                 displayed_name = f'{class_name}'
                 item = QListWidgetItem(displayed_name)
                 self.visible_classes_list_widget.addItem(item)
