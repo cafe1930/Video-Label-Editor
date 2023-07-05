@@ -34,8 +34,6 @@ class AppWindow(QMainWindow):
         # наверное, лучше хранить все рамки в списке, что должно чуть-чуть ускорить обработку
         self.frame_bboxes_list = []
 
-
-
         self.autosave_mode = False
 
         # список с видимыми рамками. Это костыль, т.к. QListWidget почему-то не сохраняет выделенными строки
@@ -339,7 +337,6 @@ class AppWindow(QMainWindow):
                 self.frame_with_boxes.bboxes_list = new_bboxes_list
             
 
-
     #@pyqtSlot()
     def update_visible_classes_list(self):
         '''
@@ -349,7 +346,6 @@ class AppWindow(QMainWindow):
 
         # определяем количество элементов в списке
         qlist_len = self.visible_classes_list_widget.count()
-
 
         new_list = []
         for bbox_idx, bbox in enumerate(self.frame_with_boxes.bboxes_list):
@@ -417,6 +413,8 @@ class AppWindow(QMainWindow):
         
     def open_file(self):
         self.close_imshow_thread()
+        # обнуляем список классов в видео, когда загружаем новое
+        self.visible_classes_list_widget.clear()
         # получаем абсолютный путь до файла
         title = 'Open video'
 
@@ -573,6 +571,8 @@ class BoxesCheckingWindow(AppWindow):
         Поведение от родительского отличается тем, что мы собираем все классы, которые есть в виде в единый список, к которому мы потом обращаемся
         '''
         self.close_imshow_thread()
+        # обнуляем список классов в видео, когда загружаем новое
+        self.visible_classes_list_widget.clear()
         # получаем абсолютный путь до файла
         title = 'Open video'
 
