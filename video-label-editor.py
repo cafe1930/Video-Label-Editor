@@ -582,6 +582,7 @@ class BoxesCheckingWindow(AppWindow):
         except KeyError:
             last_opened_folder_path = '/home'
 
+
         
         # фильтр разрешений файлов
         file_filter = 'Videos (*.mp4 *.wmw *.avi *.mpeg)'
