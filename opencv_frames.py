@@ -387,6 +387,7 @@ class BboxFrame:
                         self.displayed_corner = None
                         self.displayed_box = None
                         self.is_bboxes_changed = False
+        
         elif flags & cv2.EVENT_FLAG_ALTKEY and not flags & cv2.EVENT_FLAG_CTRLKEY:
             for bbox_idx, bbox in enumerate(self.bboxes_list):
                 x0, y0, x1, y1 = bbox.coords
@@ -486,9 +487,11 @@ class Bbox:
         # флаг-сигнал ручного создания/изменения рамки. Нужен для отличения созданных вручную и автоматически сгенерированных рамок
         self.is_manually_manipulated = is_manually_manipulated
 
-
-
     def x0y0x1y1_to_x0y0wh(self):
+        '''
+        Перевод координат из формата x0y0x1y1 в формат x0,y0, ширина, высота
+        для обеспечения работы трекера opencv
+        '''
         x0,y0,x1,y1 = self.coords
         return x0,y0,x1-x0,y1-y0
 
