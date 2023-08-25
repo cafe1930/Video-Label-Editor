@@ -1395,13 +1395,13 @@ class TrackerWindow(QMainWindow):
         if self.current_frame_idx < 0:
             self.current_frame_idx = 0
             return
-        
-        
-        for bbox in self.frame_with_boxes.bboxes_list:
-            if bbox.is_manually_manipulated:
-                class_name = bbox.class_name
-                self.tracker.init_tracker({class_name: bbox.x0y0x1y1_to_x0y0wh()}, frame)            
-
+        '''
+        if self.tracker is not None:
+            for bbox in self.frame_with_boxes.bboxes_list:
+                if bbox.is_manually_manipulated:
+                    class_name = bbox.class_name
+                    self.tracker.init_tracker({class_name: bbox.x0y0x1y1_to_x0y0wh()}, frame)            
+        '''
 
         self.set_slider_display_value(self.current_frame_idx)
         
@@ -1414,9 +1414,19 @@ class TrackerWindow(QMainWindow):
             frame = cv2.resize(frame, new_size)
         if ret:
             self.frame_with_boxes.update_img(frame)
-            #if self.is_tracking:
-            #    self.tracker(frame)
             
+            if self.tracker is not None:
+                # инициализтруем трекер
+                for bbox in self.frame_with_boxes.bboxes_list:
+                    if bbox.is_manually_manipulated:
+                        class_name = bbox.class_name
+                        self.tracker.init_tracker({class_name: bbox.x0y0x1y1_to_x0y0wh()}, frame)
+                if self.tracker.trackers_dict != {}:
+                    print(self.tracker.track(frame))
+                
+                print('------------------------------------')
+            
+
             self.load_labels_from_txt()
             self.update_visible_classes_list()
             
@@ -1437,6 +1447,7 @@ class Tracker:
             tracker = cv2.TrackerCSRT_create()
             try:
                 tracker.init(frame, bbox)
+                print(f'tracker init for {class_name}')
             except Exception:
                 print(f'Unable to init tracker for bounding box of {class_name} with coordinates {bbox}')
                 continue
@@ -1446,15 +1457,24 @@ class Tracker:
         self.trackers_dict.pop(class_name)
 
     def track(self, frame):
+        img_rows, img_cols, _ = frame.shape
+        bboxes_dict = {}
+        print('-')
         for class_name, (tracker, prev_bbox) in self.trackers_dict.items():
             update_result, bbox = tracker.update(frame)
+            
             if update_result == True:
+                print(f'Track {class_name}')
                 x0, y0, w, h = bbox
                 x1 = x0 + w
                 y1 = y0 + h
+                #bboxes_list.append(Bbox(x0, y0, x1, y1, img_rows, img_cols, class_name, color, sample_idx, is_visible=True, is_manually_manipulated=False))
+                bboxes_dict[class_name] = (x0,y0,x1,y1)
             else:
                 # переинициализируем трекер
                 self.init_tracker({class_name: prev_bbox})
+                #bboxes_dict[class_name]
+        return bboxes_dict
 
     def __call__(self, frame, bboxes):        
         pass
