@@ -1360,7 +1360,6 @@ class TrackerWindow(QMainWindow):
             with open(path_to_to_saving_labels, 'w') as fd:
                 fd.write(bboxes)
 
-
     def previous_frame_button_handling(self):
         if self.video_capture is None or self.frame_with_boxes is None:
             if self.imshow_thread.isRunning():
@@ -1371,7 +1370,6 @@ class TrackerWindow(QMainWindow):
         if self.current_frame_idx < 0:
             return
         self.read_frame()
-
 
     def next_frame_button_handling(self):
         if self.video_capture is None or self.frame_with_boxes is None:
@@ -1388,13 +1386,14 @@ class TrackerWindow(QMainWindow):
             return
         self.read_frame()
 
-
     def read_frame(self):
         if self.video_capture is None or self.current_frame_idx >= self.frame_number:
             return
+        
         if self.current_frame_idx < 0:
             self.current_frame_idx = 0
             return
+        
         '''
         if self.tracker is not None:
             for bbox in self.frame_with_boxes.bboxes_list:
@@ -1413,20 +1412,21 @@ class TrackerWindow(QMainWindow):
             new_size = tuple(map(lambda x: int(scaling_factor*x), (self.img_cols, self.img_rows)))
             frame = cv2.resize(frame, new_size)
         if ret:
+            print(f'Read frame #{self.current_frame_idx}')
             self.frame_with_boxes.update_img(frame)
             
             if self.tracker is not None:
+                #print('AAAAAA')
                 # инициализтруем трекер
                 for bbox in self.frame_with_boxes.bboxes_list:
                     if bbox.is_manually_manipulated:
                         class_name = bbox.class_name
                         self.tracker.init_tracker({class_name: bbox.x0y0x1y1_to_x0y0wh()}, frame)
+                # если словарь трекеров не полон, то выполняем трекинг
                 if self.tracker.trackers_dict != {}:
-                    print(self.tracker.track(frame))
-                
+                    print(self.tracker.track(frame))    
                 print('------------------------------------')
             
-
             self.load_labels_from_txt()
             self.update_visible_classes_list()
             
@@ -1443,6 +1443,7 @@ class Tracker:
         #self.tracker = cv2.legacy.MultiTracker_create()
 
     def init_tracker(self, bboxes_dict, frame):
+        print('Tracker init')
         for class_name, bbox in bboxes_dict.items():
             tracker = cv2.TrackerCSRT_create()
             try:
@@ -1457,6 +1458,7 @@ class Tracker:
         self.trackers_dict.pop(class_name)
 
     def track(self, frame):
+        print('TRACK')
         img_rows, img_cols, _ = frame.shape
         bboxes_dict = {}
         print('-')

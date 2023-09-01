@@ -607,8 +607,6 @@ class Bbox:
             return True
         return False
 
-
-
     def __repr__(self) -> str:
         class_name = self.class_info_dict['class_name']
         return f'{class_name}: {self.coords}, {self.is_visible}'
