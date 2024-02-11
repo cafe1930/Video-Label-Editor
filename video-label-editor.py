@@ -1435,52 +1435,6 @@ class TrackerWindow(QMainWindow):
             self.is_showing = False
             cv2.destroyAllWindows()
 
-class Tracker:
-    def __init__(self):
-        # структура словаря: {индекс_рамки: трекер}
-        self.trackers_dict = {}
-        self.bboxes_dict = {}
-        #self.tracker = cv2.legacy.MultiTracker_create()
-
-    def init_tracker(self, bboxes_dict, frame):
-        print('Tracker init')
-        for class_name, bbox in bboxes_dict.items():
-            tracker = cv2.TrackerCSRT_create()
-            try:
-                tracker.init(frame, bbox)
-                print(f'tracker init for {class_name}')
-            except Exception:
-                print(f'Unable to init tracker for bounding box of {class_name} with coordinates {bbox}')
-                continue
-            self.trackers_dict[class_name] = (tracker, bbox)
-
-    def delete_bbox(self, class_name):
-        self.trackers_dict.pop(class_name)
-
-    def track(self, frame):
-        print('TRACK')
-        img_rows, img_cols, _ = frame.shape
-        bboxes_dict = {}
-        print('-')
-        for class_name, (tracker, prev_bbox) in self.trackers_dict.items():
-            update_result, bbox = tracker.update(frame)
-            
-            if update_result == True:
-                print(f'Track {class_name}')
-                x0, y0, w, h = bbox
-                x1 = x0 + w
-                y1 = y0 + h
-                #bboxes_list.append(Bbox(x0, y0, x1, y1, img_rows, img_cols, class_name, color, sample_idx, is_visible=True, is_manually_manipulated=False))
-                bboxes_dict[class_name] = (x0,y0,x1,y1)
-            else:
-                # переинициализируем трекер
-                self.init_tracker({class_name: prev_bbox})
-                #bboxes_dict[class_name]
-        return bboxes_dict
-
-    def __call__(self, frame, bboxes):        
-        pass
-
 class ImshowThread(QThread):
     frame_update_signal = pyqtSignal()
 
